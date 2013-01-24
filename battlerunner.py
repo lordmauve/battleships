@@ -64,11 +64,27 @@ SUNK = 's'
 class Grid(object):
     SIZE = 10
     SHIPS = {
-        1: 1,
-        2: 2,
-        3: 1,
-        4: 1
+        2: 1,
+        3: 2,
+        4: 1,
+        5: 1
     }
+
+    def print_board(self):
+        print "   A B C D E F G H I J"
+        for row in range(1, self.SIZE + 1):
+            print "%2d" % row,
+            for col in range(1, self.SIZE + 1):
+                try:
+                    id, hit = self.grid[(col, row)]
+                except KeyError:
+                    print ' ',
+                else:
+                    if hit:
+                        print 'X',
+                    else:
+                        print id,
+            print
 
     def coord_in_grid(self, x, y):
         return 0 < x <= self.GRID_SIZE and 0 < y <= self.GRID_SIZE
@@ -162,6 +178,9 @@ class Game(object):
     def __init__(self, script1, script2):
         self.player1 = Player(1, script1)
         self.player2 = Player(2, script2)
+        if script1 == script2:
+            self.player1.script += ':1'
+            self.player2.script += ':2'
         self.player1.set_opponent(self.player2)
 
         self.move = 1
@@ -187,7 +206,7 @@ class Game(object):
 
         winner = player.opponent.script
         if isinstance(failure.value, ProcessTerminated):
-            outcome = '%s died with code %s' % (player, failure.value.exitCode)
+            outcome = '%s died with code %s after %d moves' % (player, failure.value.exitCode, (self.move // 2))
         else:
             outcome = '%s exited' % player
         self.deliver_result(winner, outcome)
@@ -245,7 +264,18 @@ class GameRunner(object):
 
     def print_final_result(self):
         duration = time.time() - self.start_time
-        for k in [self.script1, self.script2]:
+        if self.script1 == self.script2:
+            ks = [
+                self.script1 + ':1',
+                self.script2 + ':2'
+            ]
+        else:
+            ks = [
+                self.script1,
+                self.script2
+            ]
+
+        for k in ks:
             w = self.tally[k]
             print '%s: %d wins (%0.1f%%)' % (k, w, w * 100.0 / self.games)
         rate = self.finished / duration
