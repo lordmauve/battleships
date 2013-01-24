@@ -1,4 +1,4 @@
-GRID_SIZE = 6
+GRID_SIZE = 10
 grid = {}
 ships = {1:1, 2:2, 3:1, 4:1}
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         guess = strategy()
         print_location(*guess)
         while True:
-            outcome = raw_input('outcome [h|s|m]:').lower().strip()
+            outcome = raw_input('outcome [h|s|m]:\n').lower().strip()
             if outcome not in ('h', 'm', 's'):
                 print "I don't understand."
             else:
@@ -117,7 +117,7 @@ if __name__ == '__main__':
                 strategy = strafe(guess)
         elif outcome == 's':
             while True:
-                l = raw_input('what length of ship?')
+                l = raw_input('what length of ship?\n')
                 try:
                     l = int(l.strip())
                 except ValueError:

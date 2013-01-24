@@ -100,13 +100,13 @@ class board(object):
         
 if __name__=='__main__':
     b = board()
-    b.print_board()
-    print b.get_next_move()
+    #b.print_board()
+    print '%s%d' % b.get_next_move()
     a = True
     sunk_count = 0
-    print 'To quit type & enter: "end"'
+    #print 'To quit type & enter: "end"'
     while a:
-        var = raw_input('hit, miss or sunk?: ')
+        var = raw_input('hit, miss or sunk?:\n')
         if var == 'end':
             a = False
         else:
@@ -115,11 +115,12 @@ if __name__=='__main__':
                 continue
             move = var.strip().lower()
             b.set_last_move_state(move)
-            b.print_board()
+            # b.print_board()
             if move == 's': 
+                length = raw_input('length?\n')
                 sunk_count += 1
             if sunk_count == 5:
                 print "BATTLESHIPS!"
                 break
-            print b.get_next_move()
+            print '%s%d' % b.get_next_move()
             
