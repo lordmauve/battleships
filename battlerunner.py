@@ -1,3 +1,4 @@
+import time
 import sys
 import re
 import random
@@ -222,6 +223,7 @@ class GameRunner(object):
         self.started = 0
         self.finished = 0
         self.tally = Counter()
+        self.start_time = time.time()
         for i in range(self.CONCURRENCY):
             self.start_game()
 
@@ -234,7 +236,7 @@ class GameRunner(object):
         self.finished += 1
         winner, outcome = result
         self.tally[winner] += 1
-        print winner, outcome
+        print '%4d' % self.finished, winner, '(%s)' % outcome
         if self.finished >= self.games:
             self.print_final_result()
             reactor.stop()
@@ -242,10 +244,23 @@ class GameRunner(object):
             self.start_game()
 
     def print_final_result(self):
+        duration = time.time() - self.start_time
         for k in [self.script1, self.script2]:
             w = self.tally[k]
             print '%s: %d wins (%0.1f%%)' % (k, w, w * 100.0 / self.games)
+        rate = self.finished / duration
+        print "%d games in %0.1fs (%0.1f/s)" % (self.finished, duration, rate)
 
     
-g = GameRunner('team_a.py', 'team_alpha.py')
-reactor.run()
+if __name__ == '__main__':
+    from optparse import OptionParser
+    parser = OptionParser('%prog [-g <games>] <script> <script>')
+    parser.add_option('-g', '--games', type='int', help='Number of games to play', default=1000)
+
+    options, args = parser.parse_args()
+
+    if len(args) != 2:
+        parser.error("You must give the names of two scripts to compete.")
+
+    g = GameRunner(*args, games=options.games)
+    reactor.run()
