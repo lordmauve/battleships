@@ -1,14 +1,16 @@
 GRID_SIZE = 10
 grid = {}
-ships = {1:1, 2:2, 3:1, 4:1}
+ships = {2:1, 3:2, 4:1, 5:1}
 
 possible_moves = [(x, y) for x in range(1, GRID_SIZE + 1) for y in range(1, GRID_SIZE + 1) if x % 2 ^ y % 2]
 possible_moves += [(x, y) for x in range(1, GRID_SIZE + 1) for y in range(1, GRID_SIZE + 1) if not (x % 2 ^ y % 2)]
 
+
 def min_length():
-    for i in range(1, 5):
+    for i in range(2, 6):
         if ships[i]:
             return i
+
 
 def pick_random():
     return possible_moves.pop()
@@ -51,17 +53,22 @@ class strafe(object):
                     break
             else:
                 self.assign_new_direction()
+        else:
+            strategy = pick_random
+            return pick_random()
+
         possible_moves.remove(self.pos)
         return self.pos
 
     def assign_new_direction(self):
+        global strategy
         try:
             self.directions.pop(0)
+            dir = self.directions[0]
         except IndexError:
             strategy = pick_random
             return
         self.pos = self.first_hit
-        dir = self.directions[0]
         x, y = dir
         odir = -x, -y
         len = (
