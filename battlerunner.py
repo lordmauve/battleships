@@ -11,7 +11,7 @@ from twisted.internet.defer import DeferredQueue, Deferred
 from twisted.internet.error import ProcessTerminated, ProcessDone, ProcessExitedAlready
 
 
-class BattleshipsProcessProtocol(LineOnlyReceiver, ProcessProtocol):
+class BattleshipsProcessProtocol(ProcessProtocol):
     def __init__(self, name):
         self.name = name
         self.buf = ''
@@ -121,7 +121,7 @@ class Grid(object):
                     if self.grid.get((x, y)):
                         break
                 else:
-                    for x in range(y1, y1 + length):
+                    for y in range(y1, y1 + length):
                         self.grid[x, y] = (id, False)
                     break
         self.healths[id] = length
@@ -281,7 +281,7 @@ class GameRunner(object):
         rate = self.finished / duration
         print "%d games in %0.1fs (%0.1f/s)" % (self.finished, duration, rate)
 
-    
+
 if __name__ == '__main__':
     from optparse import OptionParser
     parser = OptionParser('%prog [-g <games>] <script> <script>')
