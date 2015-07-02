@@ -70,21 +70,30 @@ class Grid(object):
         5: 1
     }
 
-    def print_board(self):
-        print "   A B C D E F G H I J"
+    def __str__(self):
+        ls = []
+        ls.append("   A B C D E F G H I J")
         for row in range(1, self.SIZE + 1):
-            print "%2d" % row,
+            r = []
+            r.append("%2d" % row)
+
+            def cell(char):
+                if (col, row) == self.latest:
+                    r.append('\x1b[41m%s\x1b[0m' % char)
+                else:
+                    r.append(char)
             for col in range(1, self.SIZE + 1):
                 try:
                     id, hit = self.grid[(col, row)]
                 except KeyError:
-                    print ' ',
+                    cell(' ')
                 else:
                     if hit:
-                        print 'X',
+                        cell('X')
                     else:
-                        print id,
-            print
+                        cell(str(id))
+            ls.append(' '.join(r))
+        return '\n'.join(ls)
 
     def coord_in_grid(self, x, y):
         return 0 < x <= self.GRID_SIZE and 0 < y <= self.GRID_SIZE
@@ -92,6 +101,7 @@ class Grid(object):
     def __init__(self):
         self.grid = {}  # state of the board
         self.healths = {}  # healths of each ship
+        self.latest = None
         self.place_ships()
 
     def place_ships(self):
@@ -137,8 +147,10 @@ class Grid(object):
 
     def attack(self, x, y):
         """Attack the grid cell at x, y."""
+        self.latest = (x, y)
         c = self.grid.get((x, y))
-        if c is None:
+        if c is None or c == '.':
+            self.grid[x, y] = '.', False
             return MISS
         id, hit = c
         if not hit:
@@ -162,7 +174,11 @@ class Player(object):
         self.script = script
         self.grid = Grid()
         self.process = BattleshipsProcessProtocol(script)
-        reactor.spawnProcess(self.process, sys.executable, args=['python', '-u', script])
+        if 'python3' in open(script).readline():
+            py = 'python3'
+        else:
+            py = 'python2'
+        reactor.spawnProcess(self.process, sys.executable, args=[py, '-u', script])
 
     def __str__(self):
         return self.script
@@ -214,6 +230,7 @@ class Game(object):
     def on_move(self, move, player):
         self.forfeit_timer.cancel()
         self.move += 1
+        player.grid.latest = None
         result = player.opponent.grid.attack(*move)
 #        print player, move, '->', result
         if result == WIN:
@@ -233,8 +250,32 @@ class Game(object):
         player.opponent.process.close()
 
 
+def ljust(line, length=25):
+    linelen = len(re.sub('\x1b' + r'\[\d+m', '', line))
+    return line + ' ' * max(0, length - linelen)
+
+
+class ExhibitionGame(Game):
+    def on_move(self, move, player):
+        super(ExhibitionGame, self).on_move(move, player)
+        self.draw_boards()
+        time.sleep(1.5)
+
+    def draw_boards(self):
+        alines = [self.player1.script] + str(self.player1.grid).splitlines()
+        blines = [self.player2.script] + str(self.player2.grid).splitlines()
+
+        print '\x1b[2J',
+        for a, b in zip(alines, blines):
+
+            print ljust(a), ljust(b)
+        print
+
+
 class GameRunner(object):
     CONCURRENCY = 20
+    GAME_CLS = Game
+
     def __init__(self, script1, script2, games=1000):
         self.script1 = script1
         self.script2 = script2
@@ -282,15 +323,35 @@ class GameRunner(object):
         print "%d games in %0.1fs (%0.1f/s)" % (self.finished, duration, rate)
 
 
+class ExhibitionRunner(object):
+    def __init__(self, script1, script2, games=1000):
+        self.script1 = script1
+        self.script2 = script2
+        self.start_game()
+
+    def start_game(self):
+        g = ExhibitionGame(self.script1, self.script2)
+        g.result.addCallback(self.on_result)
+
+    def on_result(self, result):
+        winner, outcome = result
+        print winner, '(%s)' % outcome
+        reactor.stop()
+
+
 if __name__ == '__main__':
     from optparse import OptionParser
     parser = OptionParser('%prog [-g <games>] <script> <script>')
     parser.add_option('-g', '--games', type='int', help='Number of games to play', default=1000)
+    parser.add_option('-e', '--exhibition', action="store_true", help='Play an exhibition match')
 
     options, args = parser.parse_args()
 
     if len(args) != 2:
         parser.error("You must give the names of two scripts to compete.")
 
-    g = GameRunner(*args, games=options.games)
+    if options.exhibition:
+        g = ExhibitionRunner(*args)
+    else:
+        g = GameRunner(*args, games=options.games)
     reactor.run()
