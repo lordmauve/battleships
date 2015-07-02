@@ -141,7 +141,7 @@ class Grid(object):
         l = 0
         for k, v in self.grid.items():
             if v[0] == id:
-                del self.grid[k]
+                self.grid[k] = 'S', False
                 l += 1
         return l
 
@@ -149,10 +149,12 @@ class Grid(object):
         """Attack the grid cell at x, y."""
         self.latest = (x, y)
         c = self.grid.get((x, y))
-        if c is None or c == '.':
+        if c is None:
             self.grid[x, y] = '.', False
             return MISS
         id, hit = c
+        if id in ('.', 'S'):
+            return MISS
         if not hit:
             health = self.healths[id] - 1
             if health > 0:
@@ -256,10 +258,14 @@ def ljust(line, length=25):
 
 
 class ExhibitionGame(Game):
+    def __init__(self, script1, script2, delay):
+        self.delay = delay
+        super(ExhibitionGame, self).__init__(script1, script2)
+
     def on_move(self, move, player):
         super(ExhibitionGame, self).on_move(move, player)
         self.draw_boards()
-        time.sleep(1.5)
+        time.sleep(self.delay)
 
     def draw_boards(self):
         alines = [self.player1.script] + str(self.player1.grid).splitlines()
@@ -267,7 +273,6 @@ class ExhibitionGame(Game):
 
         print '\x1b[2J',
         for a, b in zip(alines, blines):
-
             print ljust(a), ljust(b)
         print
 
@@ -324,13 +329,14 @@ class GameRunner(object):
 
 
 class ExhibitionRunner(object):
-    def __init__(self, script1, script2, games=1000):
+    def __init__(self, script1, script2, delay=1.5):
         self.script1 = script1
         self.script2 = script2
+        self.delay = delay
         self.start_game()
 
     def start_game(self):
-        g = ExhibitionGame(self.script1, self.script2)
+        g = ExhibitionGame(self.script1, self.script2, delay=self.delay)
         g.result.addCallback(self.on_result)
 
     def on_result(self, result):
@@ -344,6 +350,7 @@ if __name__ == '__main__':
     parser = OptionParser('%prog [-g <games>] <script> <script>')
     parser.add_option('-g', '--games', type='int', help='Number of games to play', default=1000)
     parser.add_option('-e', '--exhibition', action="store_true", help='Play an exhibition match')
+    parser.add_option('-d', '--delay', type='float', help='Delay in exhibition match', default=1.5)
 
     options, args = parser.parse_args()
 
@@ -351,7 +358,7 @@ if __name__ == '__main__':
         parser.error("You must give the names of two scripts to compete.")
 
     if options.exhibition:
-        g = ExhibitionRunner(*args)
+        g = ExhibitionRunner(*args, delay=options.delay)
     else:
         g = GameRunner(*args, games=options.games)
     reactor.run()
